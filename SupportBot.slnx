@@ -4,14 +4,15 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Folder Name="/Apps/">
-    <Project Path="SupportBot.App/SupportBot.App (Package)/SupportBot.App (Package).wapproj" Type="c7167f0d-bc9f-4e6e-afe1-012c56b48db5">
-      <Deploy />
-    </Project>
-    <Project Path="SupportBot.App/SupportBot.App/SupportBot.App.csproj">
-      <Platform Solution="*|ARM64" Project="ARM64" />
-      <Platform Solution="*|x64" Project="x64" />
-      <Platform Solution="*|x86" Project="x86" />
-    </Project>
+  <Folder Name="/UI/">
+    <Project Path="SupportBot.UI.ChatWindowKit/SupportBot.UI.ChatWindowKit.csproj" />
   </Folder>
+  <Project Path="SupportBot.App/SupportBot.App (Package)/SupportBot.App (Package).wapproj" Type="c7167f0d-bc9f-4e6e-afe1-012c56b48db5">
+    <Deploy />
+  </Project>
+  <Project Path="SupportBot.App/SupportBot.App/SupportBot.App.csproj">
+    <Platform Solution="*|ARM64" Project="ARM64" />
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+  </Project>
 </Solution>

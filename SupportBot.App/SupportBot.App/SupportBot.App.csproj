@@ -25,6 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SupportBot.UI.ChatWindowKit\SupportBot.UI.ChatWindowKit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Page Update="Views\MainPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

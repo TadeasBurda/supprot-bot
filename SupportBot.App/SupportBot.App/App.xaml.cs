@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using SupportBot.App.Views;
@@ -45,8 +46,8 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         base.OnLaunched(args);
-        AssignServiceProvider();
-        InitializeMainWindow();
+        AssignServiceProvider(Services);
+        InitializeMainWindow(contentFrame: _contentFrame, initialPageType: typeof(MainPage));
     }
 
     /// <summary>
@@ -66,12 +67,14 @@ public partial class App : Application
     /// <summary>
     /// Initializes and activates the main window of the application.
     /// </summary>
-    private void InitializeMainWindow()
+    /// <param name="contentFrame">The content frame used for navigation.</param>
+    /// <param name="initialPageType">The initial page type to navigate to.</param>
+    private void InitializeMainWindow(Frame? contentFrame, Type initialPageType)
     {
         _contentFrame = new Frame();
-        _contentFrame.Navigate(typeof(MainPage));
+        _contentFrame.Navigate(initialPageType);
 
-        _mainWindow = new MainWindow { Content = _contentFrame };
+        _mainWindow = new MainWindow { Content = contentFrame };
         _mainWindow.Activate();
 
         SetupMainWindow(_mainWindow);
@@ -80,9 +83,10 @@ public partial class App : Application
     /// <summary>
     /// Assigns the application's service provider to the shared dependency configuration.
     /// </summary>
-    private void AssignServiceProvider()
+    /// <param name="services">The service provider to assign.</param>
+    private static void AssignServiceProvider(ServiceProvider services)
     {
-        // Not implemented yet
+        UI.ChatWindowKit.DependencyConfiguration.Services = services;
     }
 
     /// <summary>
@@ -91,7 +95,7 @@ public partial class App : Application
     /// <param name="mainWindow">The main window to set up.</param>
     private static void SetupMainWindow(Window mainWindow)
     {
-        // Not implemented yet
+        UI.ChatWindowKit.DependencyConfiguration.MainWindow = mainWindow;
     }
 
     /// <summary>
@@ -100,6 +104,6 @@ public partial class App : Application
     /// <param name="services">The service collection to configure.</param>
     private static void ConfigureDependencyModules(ServiceCollection services)
     {
-        // Not implemented yet
+        UI.ChatWindowKit.DependencyConfiguration.Configure(services);
     }
 }
