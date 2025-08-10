@@ -47,7 +47,7 @@ public partial class App : Application
     {
         base.OnLaunched(args);
         AssignServiceProvider(Services);
-        InitializeMainWindow(contentFrame: _contentFrame, initialPageType: typeof(MainPage));
+        InitializeMainWindow(initialPageType: typeof(MainPage));
     }
 
     /// <summary>
@@ -67,14 +67,13 @@ public partial class App : Application
     /// <summary>
     /// Initializes and activates the main window of the application.
     /// </summary>
-    /// <param name="contentFrame">The content frame used for navigation.</param>
     /// <param name="initialPageType">The initial page type to navigate to.</param>
-    private void InitializeMainWindow(Frame? contentFrame, Type initialPageType)
+    private void InitializeMainWindow(Type initialPageType)
     {
         _contentFrame = new Frame();
         _contentFrame.Navigate(initialPageType);
 
-        _mainWindow = new MainWindow { Content = contentFrame };
+        _mainWindow = new MainWindow { Content = _contentFrame };
         _mainWindow.Activate();
 
         SetupMainWindow(_mainWindow);

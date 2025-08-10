@@ -14,7 +14,7 @@ internal sealed partial class MainViewModel : BaseViewModel
     /// </summary>
     public override void Cleanup()
     {
-        throw new NotImplementedException();
+        // Not implemented yet
     }
 
     /// <summary>
@@ -22,7 +22,7 @@ internal sealed partial class MainViewModel : BaseViewModel
     /// </summary>
     public override void Initialize()
     {
-        throw new NotImplementedException();
+        // Not implemented yet
     }
 
     /// <summary>

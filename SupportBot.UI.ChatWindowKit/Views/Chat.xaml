@@ -6,7 +6,47 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:SupportBot.UI.ChatWindowKit.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:SupportBot.UI.ChatWindowKit.Models"
+    xmlns:viewmodels="using:SupportBot.UI.ChatWindowKit.ViewModels"
+    d:DataContext="{d:DesignInstance viewmodels:ChatViewModel,
+                                     IsDesignTimeCreatable=True}"
     mc:Ignorable="d">
-
-    <Grid />
+    <UserControl.Resources>
+        <DataTemplate x:Key="MessageViewTemplate" x:DataType="models:Message">
+            <Grid
+                Height="Auto"
+                Margin="4"
+                HorizontalAlignment="{x:Bind MsgAlignment}">
+                <StackPanel
+                    Width="350"
+                    MinHeight="75"
+                    Padding="10,0,0,10"
+                    Background="{ThemeResource SystemColorHighlightColor}"
+                    CornerRadius="{StaticResource ControlCornerRadius}">
+                    <TextBlock
+                        Padding="0,10,0,0"
+                        FontSize="20"
+                        Foreground="{ThemeResource SystemColorHighlightTextColor}"
+                        Text="{x:Bind MsgText}" />
+                    <TextBlock
+                        Padding="0,0,0,10"
+                        FontSize="15"
+                        Foreground="{ThemeResource SystemColorHighlightTextColor}"
+                        Text="{x:Bind MsgDateTime}" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+    <ListView ItemTemplate="{StaticResource MessageViewTemplate}" ItemsSource="{x:Bind ViewModel.Messages}">
+        <ListView.ItemsPanel>
+            <ItemsPanelTemplate>
+                <ItemsStackPanel VerticalAlignment="Bottom" ItemsUpdatingScrollMode="KeepLastItemInView" />
+            </ItemsPanelTemplate>
+        </ListView.ItemsPanel>
+        <ListView.ItemContainerStyle>
+            <Style TargetType="ListViewItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
+        </ListView.ItemContainerStyle>
+    </ListView>
 </UserControl>

@@ -8,7 +8,8 @@
     xmlns:local="using:SupportBot.App.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="using:SupportBot.App.ViewModels"
-    d:DataContext="{d:DesignInstance viewmodels:MainViewModel, IsDesignTimeCreatable=True}"
+    d:DataContext="{d:DesignInstance viewmodels:MainViewModel,
+                                     IsDesignTimeCreatable=True}"
     mc:Ignorable="d">
     <Grid>
         <chatwindowkit:Chat />
