@@ -1,13 +1,14 @@
-﻿using Microsoft.UI.Dispatching;
-using System;
+﻿using System;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Dispatching;
 
-namespace SupportBot.App.ViewModels;
+namespace SupportBot.Helpers.CommunityToolkit.ViewModels;
 
 /// <summary>
 /// Provides a base class for all view models in the application.
 /// Implements the <see cref="IDisposable"/> interface for resource management.
 /// </summary>
-internal abstract class BaseViewModel : IDisposable
+public abstract class BaseViewModel : ObservableObject, IDisposable
 {
     /// <summary>
     /// Indicates whether the object has been disposed.
@@ -18,17 +19,17 @@ internal abstract class BaseViewModel : IDisposable
     /// Gets or sets the dispatcher queue associated with the view model.
     /// Used to marshal calls to the UI thread.
     /// </summary>
-    internal DispatcherQueue? DispatcherQueue { get; set; }
+    public DispatcherQueue? DispatcherQueue { get; set; }
 
     /// <summary>
     /// Initializes the view model.
     /// </summary>
-    internal abstract void Initialize();
+    public abstract void Initialize();
 
     /// <summary>
     /// Cleans up resources used by the view model.
     /// </summary>
-    internal abstract void Cleanup();
+    public abstract void Cleanup();
 
     /// <summary>
     /// Releases the unmanaged resources used by the view model and optionally releases the managed resources.

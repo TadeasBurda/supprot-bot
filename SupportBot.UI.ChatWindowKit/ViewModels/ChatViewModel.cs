@@ -1,25 +1,15 @@
-﻿using SupportBot.Helpers.CommunityToolkit.ViewModels;
-using System;
+﻿using System;
+using SupportBot.Helpers.CommunityToolkit.ViewModels;
 
-namespace SupportBot.App.ViewModels;
+namespace SupportBot.UI.ChatWindowKit.ViewModels;
 
-/// <summary>
-/// Represents the main view model for the application.
-/// Inherits from <see cref="BaseViewModel"/> and provides initialization, cleanup, and disposal logic.
-/// </summary>
-internal sealed partial class MainViewModel : BaseViewModel
+internal sealed partial class ChatViewModel : BaseViewModel
 {
-    /// <summary>
-    /// Cleans up resources used by the main view model.
-    /// </summary>
     public override void Cleanup()
     {
         throw new NotImplementedException();
     }
 
-    /// <summary>
-    /// Initializes the main view model.
-    /// </summary>
     public override void Initialize()
     {
         throw new NotImplementedException();

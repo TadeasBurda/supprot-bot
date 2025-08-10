@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SupportBot.UI.ChatWindowKit.ViewModels;
 
 namespace SupportBot.UI.ChatWindowKit;
 
@@ -36,6 +37,7 @@ internal static class DependencyExtensions
     /// <returns>The service collection with ViewModels registered.</returns>
     internal static IServiceCollection AddViewModels(this IServiceCollection services)
     {
+        services.AddTransient<ChatViewModel>();
         return services;
     }
 }

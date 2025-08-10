@@ -4,6 +4,10 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Helpers/" />
+  <Folder Name="/Helpers/CommunityToolkit/">
+    <Project Path="SupportBot.Helpers.CommunityToolkit.ViewModels/SupportBot.Helpers.CommunityToolkit.ViewModels.csproj" />
+  </Folder>
   <Folder Name="/UI/">
     <Project Path="SupportBot.UI.ChatWindowKit/SupportBot.UI.ChatWindowKit.csproj" />
   </Folder>
