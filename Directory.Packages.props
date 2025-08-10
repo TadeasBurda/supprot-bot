@@ -5,4 +5,12 @@
   </PropertyGroup>
   <ItemGroup>
   </ItemGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools">
+      <Version>10.0.26100.4654</Version>
+    </PackageVersion>
+    <PackageVersion Include="Microsoft.WindowsAppSDK">
+      <Version>1.7.250606001</Version>
+    </PackageVersion>
+  </ItemGroup>
 </Project>
