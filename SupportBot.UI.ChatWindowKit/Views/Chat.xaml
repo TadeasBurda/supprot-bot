@@ -37,16 +37,46 @@
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
-    <ListView ItemTemplate="{StaticResource MessageViewTemplate}" ItemsSource="{x:Bind ViewModel.Messages}">
-        <ListView.ItemsPanel>
-            <ItemsPanelTemplate>
-                <ItemsStackPanel VerticalAlignment="Bottom" ItemsUpdatingScrollMode="KeepLastItemInView" />
-            </ItemsPanelTemplate>
-        </ListView.ItemsPanel>
-        <ListView.ItemContainerStyle>
-            <Style TargetType="ListViewItem">
-                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            </Style>
-        </ListView.ItemContainerStyle>
-    </ListView>
+
+    <Grid RowDefinitions="*,Auto,Auto">
+        <ListView
+            Width="800"
+            Margin="0,0,0,24"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            ItemTemplate="{StaticResource MessageViewTemplate}"
+            ItemsSource="{x:Bind ViewModel.Messages}">
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <ItemsStackPanel VerticalAlignment="Bottom" ItemsUpdatingScrollMode="KeepLastItemInView" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListView.ItemContainerStyle>
+        </ListView>
+
+        <TextBox
+            x:Name="UserInputTextBox"
+            x:Uid="/SupportBot.UI.ChatWindowKit/Resources/UserInput"
+            Grid.Row="1"
+            Width="500"
+            Height="100"
+            Margin="0,0,0,24"
+            HorizontalAlignment="Center"
+            IsSpellCheckEnabled="True"
+            KeyDown="TextBox_KeyDown"
+            Text="{x:Bind ViewModel.UserInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            TextWrapping="Wrap" />
+
+
+        <Button
+            x:Uid="/SupportBot.UI.ChatWindowKit/Resources/SendButton"
+            Grid.Row="2"
+            Margin="0,0,0,24"
+            HorizontalAlignment="Center"
+            Command="{x:Bind ViewModel.SendMessageCommand}" />
+    </Grid>
 </UserControl>
