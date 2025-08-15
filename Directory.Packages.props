@@ -15,5 +15,6 @@
     <PackageVersion Include="Microsoft.WindowsAppSDK">
       <Version>1.7.250606001</Version>
     </PackageVersion>
+    <PackageVersion Include="OpenAI" Version="2.3.0" />
   </ItemGroup>
 </Project>

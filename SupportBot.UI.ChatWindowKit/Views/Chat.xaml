@@ -27,7 +27,8 @@
                         Padding="0,10,0,0"
                         FontSize="20"
                         Foreground="{ThemeResource SystemColorHighlightTextColor}"
-                        Text="{x:Bind MsgText}" />
+                        Text="{x:Bind MsgText}"
+                        TextWrapping="Wrap" />
                     <TextBlock
                         Padding="0,0,0,10"
                         FontSize="15"

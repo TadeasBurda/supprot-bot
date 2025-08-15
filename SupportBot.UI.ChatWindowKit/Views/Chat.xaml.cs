@@ -36,15 +36,15 @@ public sealed partial class Chat : UserControl
     {
         UserInputTextBox.Focus(FocusState.Programmatic);
         ViewModel.DispatcherQueue = DispatcherQueue;
-        ViewModel.MessageReceived += OnMessageReceived;
         ViewModel.Initialize();
+        ViewModel.MessageReceived += OnMessageReceived;
     }
 
     /// <summary>
     /// Handles the <see cref="ChatViewModel.MessageReceived"/> callback.
     /// Restores focus to the user input text box after a message is processed.
     /// </summary>
-    private void OnMessageReceived()
+    private void OnMessageReceived(string _)
     {
         UserInputTextBox.Focus(FocusState.Programmatic);
     }
