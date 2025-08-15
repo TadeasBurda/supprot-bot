@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SupportBot.Helpers.Window.LocalSettings\SupportBot.Helpers.Window.LocalSettings.csproj" />
     <ProjectReference Include="..\..\SupportBot.UI.ChatWindowKit\SupportBot.UI.ChatWindowKit.csproj" />
   </ItemGroup>
 
