@@ -4,6 +4,9 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Assistants/">
+    <Project Path="SupportBot.Assistants.Orchestrator/SupportBot.Assistants.Orchestrator.csproj" Id="7a98afe2-bba5-4c9a-9671-70ce6b187a34" />
+  </Folder>
   <Folder Name="/Helpers/" />
   <Folder Name="/Helpers/CommunityToolkit/">
     <Project Path="SupportBot.Helpers.CommunityToolkit.ViewModels/SupportBot.Helpers.CommunityToolkit.ViewModels.csproj" />

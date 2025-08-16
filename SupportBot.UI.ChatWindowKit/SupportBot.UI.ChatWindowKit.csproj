@@ -21,6 +21,7 @@
 		<PackageReference Include="OpenAI" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\SupportBot.Assistants.Orchestrator\SupportBot.Assistants.Orchestrator.csproj" />
 		<ProjectReference Include="..\SupportBot.Helpers.CommunityToolkit.ViewModels\SupportBot.Helpers.CommunityToolkit.ViewModels.csproj" />
 	</ItemGroup>
 	<ItemGroup>
