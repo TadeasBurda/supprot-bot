@@ -11,6 +11,12 @@
   <Folder Name="/Helpers/Window/">
     <Project Path="SupportBot.Helpers.Window.LocalSettings/SupportBot.Helpers.Window.LocalSettings.csproj" Id="882db583-da28-4b0c-a013-8b45699b5b33" />
   </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+  </Folder>
   <Folder Name="/UI/">
     <Project Path="SupportBot.UI.ChatWindowKit/SupportBot.UI.ChatWindowKit.csproj" />
   </Folder>
