@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
+using OpenAI;
 
 namespace SupportBot.Assistants.Orchestrator;
 
@@ -15,6 +17,7 @@ internal static class DependencyExtensions
     internal static IServiceCollection Configure(this IServiceCollection services)
     {
         services.AddServices();
+        services.AddSingleton<IMainAgent, MainAgent>();
         return services;
     }
 
@@ -25,6 +28,9 @@ internal static class DependencyExtensions
     /// <returns>The service collection with services registered.</returns>
     internal static IServiceCollection AddServices(this IServiceCollection services)
     {
+        services.AddSingleton(serviceProvider => new OpenAIClient(
+            apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+        ));
         return services;
     }
 }

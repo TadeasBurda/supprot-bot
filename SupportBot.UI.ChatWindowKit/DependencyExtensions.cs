@@ -1,7 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using OpenAI.Chat;
-using SupportBot.UI.ChatWindowKit.Services;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SupportBot.UI.ChatWindowKit.ViewModels;
 
 namespace SupportBot.UI.ChatWindowKit;
@@ -18,23 +15,7 @@ internal static class DependencyExtensions
     /// <returns>The configured service collection.</returns>
     internal static IServiceCollection Configure(this IServiceCollection services)
     {
-        services.AddServices();
         services.AddViewModels();
-        return services;
-    }
-
-    /// <summary>
-    /// Registers application services with the dependency injection container.
-    /// </summary>
-    /// <param name="services">The service collection to add services to.</param>
-    /// <returns>The service collection with services registered.</returns>
-    internal static IServiceCollection AddServices(this IServiceCollection services)
-    {
-        services.AddSingleton(serviceProvider => new ChatClient(
-            model: "gpt-4o",
-            apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-        ));
-        services.AddSingleton<IChatSessionService, ChatSessionService>();
         return services;
     }
 

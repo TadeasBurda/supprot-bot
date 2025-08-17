@@ -44,7 +44,7 @@ public sealed partial class Chat : UserControl
     /// Handles the <see cref="ChatViewModel.MessageReceived"/> callback.
     /// Restores focus to the user input text box after a message is processed.
     /// </summary>
-    private void OnMessageReceived(string _)
+    private void OnMessageReceived()
     {
         UserInputTextBox.Focus(FocusState.Programmatic);
     }

@@ -1,12 +1,18 @@
-﻿using System;
+﻿#pragma warning disable OPENAI001 // For evaluation purposes only
+
+using System;
+using System.ClientModel;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
+using OpenAI.Assistants;
+using SupportBot.Assistants.Orchestrator;
 using SupportBot.Helpers.CommunityToolkit.ViewModels;
 using SupportBot.UI.ChatWindowKit.Models;
-using SupportBot.UI.ChatWindowKit.Services;
 
 namespace SupportBot.UI.ChatWindowKit.ViewModels;
 
@@ -17,24 +23,24 @@ namespace SupportBot.UI.ChatWindowKit.ViewModels;
 /// <remarks>
 /// Responsibilities:
 /// - Holds user input text (two-way bound to a TextBox).
-/// - Maintains a bounded in-memory message history (<see cref="MAX_MESSAGES"/> limit).
-/// - Coordinates with <see cref="IChatSessionService"/> for assistant responses.
+/// - Coordinates with <see cref="IMainAgent"/> for assistant responses.
 /// - Raises <see cref="MessageReceived"/> after any message (user or assistant) is appended.
 /// Thread Safety: This type is intended to be accessed on the UI thread only.
 /// Disposal: Ensures event handlers are detached and state cleared during cleanup / disposal.
 /// </remarks>
-/// <param name="chatSession">Chat session abstraction used to interact with the AI assistant.</param>
-internal sealed partial class ChatViewModel(IChatSessionService chatSession) : BaseViewModel
+/// <param name="mainAgent">Chat session abstraction used to interact with the AI assistant.</param>
+internal sealed partial class ChatViewModel(IMainAgent mainAgent) : BaseViewModel
 {
     /// <summary>
-    /// Maximum number of messages retained in the <see cref="Messages"/> collection before the oldest is evicted.
+    /// Cancellation token source associated with the current initialization / background operations.
+    /// Disposed and renewed on each <see cref="Initialize"/> call.
     /// </summary>
-    private const int MAX_MESSAGES = 100;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     /// <summary>
-    /// Underlying chat session service used to send user content and receive assistant responses.
+    /// Reference to the main agent responsible for orchestrating assistant communication.
     /// </summary>
-    private readonly IChatSessionService _chatSession = chatSession;
+    private readonly IMainAgent _mainAgent = mainAgent;
 
     /// <summary>
     /// Backing field for the <see cref="MessageReceived"/> event.
@@ -60,7 +66,6 @@ internal sealed partial class ChatViewModel(IChatSessionService chatSession) : B
 
     /// <summary>
     /// Gets the collection of chat messages displayed in the chat window.
-    /// Maintains a bounded size enforced by <see cref="MAX_MESSAGES"/>.
     /// </summary>
     internal ObservableCollection<Message> Messages { get; } = [];
 
@@ -70,7 +75,7 @@ internal sealed partial class ChatViewModel(IChatSessionService chatSession) : B
     /// </summary>
     /// <remarks>
     /// This method only queues the user message locally; assistant responses are populated asynchronously through
-    /// the session service via <see cref="OnMessageReceived(string)"/> callback.
+    /// the session service via <see cref="OnMainAgentMessageReceived(CollectionResult{ThreadMessage})"/> callback.
     /// </remarks>
     [RelayCommand]
     private async Task SendMessageAsync()
@@ -78,8 +83,7 @@ internal sealed partial class ChatViewModel(IChatSessionService chatSession) : B
         if (string.IsNullOrWhiteSpace(UserInput))
             return;
 
-        AddMessage(content: UserInput, role: Role.User);
-        await _chatSession.AddMessageAsync(content: UserInput);
+        await _mainAgent.HandleCustomerMessageAsync(content: UserInput);
 
         UserInput = string.Empty;
     }
@@ -90,9 +94,28 @@ internal sealed partial class ChatViewModel(IChatSessionService chatSession) : B
     /// </summary>
     public override void Cleanup()
     {
-        Messages.Clear();
-        _messageReceived = null;
         UserInput = string.Empty;
+
+        Messages.Clear();
+
+        _messageReceived = null;
+
+        _disposed = false;
+
+        _mainAgent.MessageReceived -= OnMainAgentMessageReceived;
+        _mainAgent.Cleanup();
+
+        CleanupCancellationToken();
+    }
+
+    /// <summary>
+    /// Cancels and disposes the current <see cref="CancellationTokenSource"/> instance if present.
+    /// Safe to call multiple times.
+    /// </summary>
+    private void CleanupCancellationToken()
+    {
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
     }
 
     /// <summary>
@@ -102,22 +125,53 @@ internal sealed partial class ChatViewModel(IChatSessionService chatSession) : B
     public override void Initialize()
     {
         Cleanup();
-        _disposed = false;
-        _chatSession.StartSession();
-        _chatSession.MessageReceived += OnMessageReceived;
+        _cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _cancellationTokenSource.Token;
+        _ = Task.Run(
+            async () =>
+            {
+                await _mainAgent.InitializeAsync();
+                _mainAgent.MessageReceived += OnMainAgentMessageReceived;
+            },
+            cancellationToken
+        );
     }
 
     /// <summary>
-    /// Handles assistant message notifications from the underlying chat session service.
-    /// Adds assistant messages to the UI message collection.
+    /// Handles messages received from the <see cref="IMainAgent"/> by translating them into
+    /// UI <see cref="Message"/> instances and appending them to the <see cref="Messages"/> collection.
+    /// Also surfaces any file annotations as separate informational messages.
     /// </summary>
-    /// <param name="content">The textual content of the assistant response.</param>
-    private void OnMessageReceived(string content)
+    /// <param name="messages">The collection of thread messages returned by the assistant.</param>
+    private void OnMainAgentMessageReceived(CollectionResult<ThreadMessage> messages)
     {
-        if (string.IsNullOrWhiteSpace(content))
-            return;
+        _ = DispatcherQueue?.TryEnqueue(Messages.Clear);
 
-        AddMessage(content: content, role: Role.Assistant);
+        foreach (ThreadMessage message in messages)
+        {
+            var role = message.Role == MessageRole.User ? Role.User : Role.Assistant;
+            foreach (
+                var contentItem in message.Content.Where(contentItem =>
+                    !string.IsNullOrEmpty(contentItem.Text)
+                )
+            )
+            {
+                AddMessage(contentItem.Text, role);
+                foreach (TextAnnotation annotation in contentItem.TextAnnotations)
+                {
+                    if (!string.IsNullOrEmpty(annotation.InputFileId))
+                    {
+                        AddMessage($"* File citation, file ID: {annotation.InputFileId}", role);
+                    }
+                    if (!string.IsNullOrEmpty(annotation.OutputFileId))
+                    {
+                        AddMessage($"* File output, new file ID: {annotation.OutputFileId}", role);
+                    }
+                }
+            }
+        }
+
+        _messageReceived?.Invoke();
     }
 
     /// <summary>
@@ -159,14 +213,7 @@ internal sealed partial class ChatViewModel(IChatSessionService chatSession) : B
             MsgAlignment = role == Role.User ? HorizontalAlignment.Right : HorizontalAlignment.Left,
             MsgDateTime = DateTime.Now.ToString("hh:mm tt"),
         };
-        Messages.Add(message);
-
-        if (Messages.Count > MAX_MESSAGES)
-        {
-            Messages.RemoveAt(0);
-        }
-
-        _messageReceived?.Invoke(content: content); // Notify subscribers that a message has been received
+        _ = DispatcherQueue?.TryEnqueue(() => Messages.Add(message));
     }
 
     /// <summary>
