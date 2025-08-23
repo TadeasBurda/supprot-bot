@@ -60,8 +60,15 @@ public interface IMainAgent : IDisposable
 /// - Publishing full message history upon completion.
 /// </summary>
 /// <param name="openAIClient">The configured <see cref="OpenAIClient"/> used to obtain assistant clients.</param>
-internal sealed partial class MainAgent(OpenAIClient openAIClient) : IMainAgent
+/// <param name="assistantId">The unique identifier of an existing Assistant to use for this orchestrator.</param>
+internal sealed partial class MainAgent(OpenAIClient openAIClient, string assistantId) : IMainAgent
 {
+    /// <summary>
+    /// Unique identifier of the Assistant instance to load and operate against.
+    /// Provided via the primary constructor.
+    /// </summary>
+    private readonly string _assistantId = assistantId;
+
     /// <summary>
     /// Root OpenAI client used to obtain an <see cref="AssistantClient"/>.
     /// </summary>
@@ -98,7 +105,7 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient) : IMainAgent
     public async Task InitializeAsync()
     {
         Cleanup();
-        await InitializeAssistantAsync();
+        await InitializeAssistantAsync(_assistantId);
     }
 
     /// <inheritdoc />
@@ -130,20 +137,18 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient) : IMainAgent
             );
         }
 
-        var assistantId = _assistant.Id;
-
         string? runId;
         if (string.IsNullOrEmpty(_threadId))
         {
             (_threadId, runId) = await StartNewThreadRunAsync(
                 _assistantClient,
                 content,
-                assistantId
+                _assistantId
             );
         }
         else
         {
-            runId = await ContinueThreadRunAsync(_assistantClient, content, assistantId);
+            runId = await ContinueThreadRunAsync(_assistantClient, content, _assistantId);
         }
 
         if (string.IsNullOrEmpty(runId))
@@ -158,17 +163,12 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient) : IMainAgent
     /// <summary>
     /// Creates a new assistant instance with predefined instructions and configures the internal assistant client.
     /// </summary>
+    /// <param name="assistantId">Unique identifier of the Assistant to retrieve.</param>
     /// <returns>Task representing the asynchronous creation operation.</returns>
-    private async Task InitializeAssistantAsync()
+    private async Task InitializeAssistantAsync(string assistantId)
     {
         var assistantClient = _openAIClient.GetAssistantClient();
-        var assistantOptions = new AssistantCreationOptions()
-        {
-            Name = "MainSupportAgent",
-            Instructions =
-                "You are a support assistant. Your job is to understand customer issues and delegate them to the correct specialized agent.",
-        };
-        _assistant = await assistantClient.CreateAssistantAsync("gpt-4o", assistantOptions);
+        _assistant = await assistantClient.GetAssistantAsync(assistantId);
         _assistantClient = _openAIClient.GetAssistantClient();
     }
 

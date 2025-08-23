@@ -17,7 +17,16 @@ internal static class DependencyExtensions
     internal static IServiceCollection Configure(this IServiceCollection services)
     {
         services.AddServices();
-        services.AddSingleton<IMainAgent, MainAgent>();
+        services.AddSingleton<IMainAgent, MainAgent>(services =>
+        {
+            var assistantId =
+                Environment.GetEnvironmentVariable("MAIN_AGENT_ID")
+                ?? throw new InvalidOperationException(
+                    "MAIN_AGENT_ID environment variable is not set."
+                );
+            var openAIClient = services.GetRequiredService<OpenAIClient>();
+            return new MainAgent(openAIClient, assistantId);
+        });
         return services;
     }
 

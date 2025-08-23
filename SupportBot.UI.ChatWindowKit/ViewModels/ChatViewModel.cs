@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using OpenAI.Assistants;
 using SupportBot.Assistants.Orchestrator;
@@ -29,14 +31,9 @@ namespace SupportBot.UI.ChatWindowKit.ViewModels;
 /// Disposal: Ensures event handlers are detached and state cleared during cleanup / disposal.
 /// </remarks>
 /// <param name="mainAgent">Chat session abstraction used to interact with the AI assistant.</param>
-internal sealed partial class ChatViewModel(IMainAgent mainAgent) : BaseViewModel
+internal sealed partial class ChatViewModel(ILogger<ChatViewModel> logger, IMainAgent mainAgent)
+    : BaseViewModel(logger)
 {
-    /// <summary>
-    /// Cancellation token source associated with the current initialization / background operations.
-    /// Disposed and renewed on each <see cref="Initialize"/> call.
-    /// </summary>
-    private CancellationTokenSource? _cancellationTokenSource;
-
     /// <summary>
     /// Reference to the main agent responsible for orchestrating assistant communication.
     /// </summary>
@@ -100,40 +97,26 @@ internal sealed partial class ChatViewModel(IMainAgent mainAgent) : BaseViewMode
 
         _messageReceived = null;
 
-        _disposed = false;
-
         _mainAgent.MessageReceived -= OnMainAgentMessageReceived;
         _mainAgent.Cleanup();
 
-        CleanupCancellationToken();
+        base.Cleanup();
     }
 
-    /// <summary>
-    /// Cancels and disposes the current <see cref="CancellationTokenSource"/> instance if present.
-    /// Safe to call multiple times.
-    /// </summary>
-    private void CleanupCancellationToken()
-    {
-        _cancellationTokenSource?.Cancel();
-        _cancellationTokenSource?.Dispose();
-    }
-
-    /// <summary>
-    /// Initializes the chat view model for a fresh chat session.
-    /// Clears existing state, resets disposal flag, starts a new session, and subscribes to session events.
-    /// </summary>
-    public override void Initialize()
+    public override void Initialize(
+        DispatcherQueue dispatcherQueue,
+        CancellationToken cancellationToken = default
+    )
     {
         Cleanup();
-        _cancellationTokenSource = new CancellationTokenSource();
-        var cancellationToken = _cancellationTokenSource.Token;
+        base.Initialize(dispatcherQueue, cancellationToken);
         _ = Task.Run(
             async () =>
             {
                 await _mainAgent.InitializeAsync();
                 _mainAgent.MessageReceived += OnMainAgentMessageReceived;
             },
-            cancellationToken
+            _cancellationToken
         );
     }
 
@@ -145,7 +128,7 @@ internal sealed partial class ChatViewModel(IMainAgent mainAgent) : BaseViewMode
     /// <param name="messages">The collection of thread messages returned by the assistant.</param>
     private void OnMainAgentMessageReceived(CollectionResult<ThreadMessage> messages)
     {
-        _ = DispatcherQueue?.TryEnqueue(Messages.Clear);
+        _ = _dispatcherQueue?.TryEnqueue(Messages.Clear);
 
         foreach (ThreadMessage message in messages)
         {
@@ -213,7 +196,7 @@ internal sealed partial class ChatViewModel(IMainAgent mainAgent) : BaseViewMode
             MsgAlignment = role == Role.User ? HorizontalAlignment.Right : HorizontalAlignment.Left,
             MsgDateTime = DateTime.Now.ToString("hh:mm tt"),
         };
-        _ = DispatcherQueue?.TryEnqueue(() => Messages.Add(message));
+        _ = _dispatcherQueue?.TryEnqueue(() => Messages.Add(message));
     }
 
     /// <summary>
