@@ -1,3 +1,4 @@
+using System.Threading;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using SupportBot.UI.ChatWindowKit.ViewModels;
@@ -8,8 +9,27 @@ namespace SupportBot.UI.ChatWindowKit.Views;
 /// Represents the chat user control for the application.
 /// Handles initialization, cleanup, and disposal of the associated <see cref="ChatViewModel"/>.
 /// </summary>
+/// <remarks>
+/// Responsibilities:
+/// - Resolve and initialize the <see cref="ViewModel"/> when the control is loaded.
+/// - Provide the current dispatcher and a fresh <see cref="CancellationToken"/> to the view model.
+/// - Cancel and dispose transient resources when the control is unloaded.
+/// UI behavior:
+/// - Automatically focuses the user input text box on load and after each message is processed.
+/// </remarks>
+/// <seealso cref="UserControl"/>
 public sealed partial class Chat : UserControl
 {
+    /// <summary>
+    /// Backing <see cref="CancellationTokenSource"/> used to propagate cancellation to background operations
+    /// started while the control is loaded.
+    /// </summary>
+    /// <remarks>
+    /// The source is recreated on each load, and is cancelled and disposed during unload via
+    /// <see cref="CleanupCancellationTokenSource"/> to ensure deterministic shutdown of in-flight work.
+    /// </remarks>
+    private CancellationTokenSource? _cancellationTokenSource;
+
     /// <summary>
     /// Gets the view model associated with this chat control.
     /// </summary>
@@ -35,8 +55,12 @@ public sealed partial class Chat : UserControl
     private void OnLoaded(object _, RoutedEventArgs __)
     {
         UserInputTextBox.Focus(FocusState.Programmatic);
-        ViewModel.DispatcherQueue = DispatcherQueue;
-        ViewModel.Initialize();
+
+        CleanupCancellationTokenSource();
+        _cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _cancellationTokenSource.Token;
+
+        ViewModel.Initialize(DispatcherQueue, cancellationToken);
         ViewModel.MessageReceived += OnMessageReceived;
     }
 
@@ -58,8 +82,7 @@ public sealed partial class Chat : UserControl
     private void OnUnloaded(object _, RoutedEventArgs __)
     {
         ViewModel.Cleanup();
-        ViewModel.Dispose();
-        ViewModel.DispatcherQueue = null;
+        CleanupCancellationTokenSource();
         ViewModel.MessageReceived -= OnMessageReceived;
     }
 
@@ -81,5 +104,16 @@ public sealed partial class Chat : UserControl
             return;
 
         ViewModel.SendMessageCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// Cancels and disposes the existing <see cref="CancellationTokenSource"/>, if any,
+    /// and resets the reference to <c>null</c>. Safe to call multiple times.
+    /// </summary>
+    private void CleanupCancellationTokenSource()
+    {
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
     }
 }
