@@ -1,5 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.IO;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Formatting.Json;
 using SupportBot.App.ViewModels;
+using Windows.Storage;
 
 namespace SupportBot.App;
 
@@ -15,18 +20,37 @@ internal static class DependencyExtensions
     /// <returns>The configured service collection.</returns>
     internal static IServiceCollection Configure(this IServiceCollection services)
     {
-        services.AddServices();
+        services.AddSerilogLogging();
         services.AddViewModels();
         return services;
     }
 
     /// <summary>
-    /// Registers application services with the dependency injection container.
+    /// Adds and configures Serilog logging for the application.
     /// </summary>
-    /// <param name="services">The service collection to add services to.</param>
-    /// <returns>The service collection with services registered.</returns>
-    internal static IServiceCollection AddServices(this IServiceCollection services)
+    /// <param name="services">The service collection to add logging to.</param>
+    /// <returns>The service collection with Serilog logging configured.</returns>
+    internal static IServiceCollection AddSerilogLogging(this IServiceCollection services)
     {
+        services.AddLogging(logging =>
+        {
+            logging.ClearProviders();
+
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Warning()
+                .WriteTo.File(
+                    path: Path.Combine(
+                        ApplicationData.Current.LocalFolder.Path,
+                        "logs",
+                        "logs/log-.json"
+                    ),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 7,
+                    formatter: new JsonFormatter()
+                )
+                .CreateLogger();
+            logging.AddSerilog(Log.Logger);
+        });
         return services;
     }
 
