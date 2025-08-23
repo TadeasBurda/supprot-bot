@@ -1,6 +1,7 @@
 ﻿#pragma warning disable OPENAI001 // For evaluation purposes only
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using OpenAI;
 using OpenAI.Assistants;
@@ -187,6 +188,22 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
     {
         _ = await assistantClient.CreateMessageAsync(_threadId, MessageRole.User, [content]);
         var run = await assistantClient.CreateRunAsync(_threadId, assistantId);
+        //{
+        //    ToolsOverride = new()
+        //    {
+        //        { "get_current_location", GetCurrentLocation },
+        //        { "get_current_weather", (parameters) =>
+        //            {
+        //                parameters.TryGetValue("location", out var locationObj);
+        //                parameters.TryGetValue("unit", out var unitObj);
+        //                var location = locationObj as string ?? "unknown";
+        //                var unit = unitObj as string ?? "celsius";
+        //                return GetCurrentWeather(location, unit);
+        //            }
+        //        }
+        //    }
+        //});
+        // ToolDefinition
         return run.Value.Id;
     }
 
@@ -228,6 +245,18 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
         _messageReceived?.Invoke(messages);
     }
 
+    private static string GetCurrentLocation()
+    {
+        // Call the location API here.
+        return "San Francisco";
+    }
+
+    private static string GetCurrentWeather(string location, string unit = "celsius")
+    {
+        // Call the weather API here.
+        return $"31 {unit}";
+    }
+
     /// <summary>
     /// Polls an assistant run until its status becomes terminal (completed, failed, cancelled, etc.).
     /// </summary>
@@ -245,6 +274,60 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
         {
             await Task.Delay(TimeSpan.FromMilliseconds(250));
             runStatus = (await assistantClient.GetRunAsync(threadId, runId)).Value;
+
+            if (runStatus.RequiredActions?.Count > 0)
+            {
+                foreach (var action in runStatus.RequiredActions)
+                {
+                    if (action.FunctionName == nameof(GetCurrentLocation))
+                    {
+                        var location = GetCurrentLocation();
+                        await assistantClient.SubmitToolOutputsToRunAsync(
+                            threadId,
+                            runId,
+                            [new ToolOutput() { Output = location, ToolCallId = action.ToolCallId }]
+                        );
+                    }
+                    else if (action.FunctionName == nameof(GetCurrentWeather))
+                    {
+                        // Extract arguments: supports both JSON string and dictionary-like structures.
+                        string location = "unknown";
+                        string unit = "celsius";
+
+                        if (action.FunctionArguments is string argsJson)
+                        {
+                            try
+                            {
+                                using var doc = System.Text.Json.JsonDocument.Parse(argsJson);
+                                var root = doc.RootElement;
+
+                                if (root.TryGetProperty("location", out var locEl) &&
+                                    locEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                                {
+                                    location = locEl.GetString() ?? location;
+                                }
+
+                                if (root.TryGetProperty("unit", out var unitEl) &&
+                                    unitEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                                {
+                                    unit = unitEl.GetString() ?? unit;
+                                }
+                            }
+                            catch (System.Text.Json.JsonException)
+                            {
+                                // Ignore malformed JSON and keep defaults.
+                            }
+                        }
+
+                        var weather = GetCurrentWeather(location, unit);
+                        await assistantClient.SubmitToolOutputsToRunAsync(
+                            threadId,
+                            runId,
+                            [new ToolOutput() { Output = weather, ToolCallId = action.ToolCallId }]
+                        );
+                    }
+                }
+            }
         } while (runStatus is { Status.IsTerminal: false });
     }
 
