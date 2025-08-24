@@ -5,6 +5,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Assistants/">
+    <Project Path="SupportBot.Assistants.Onboarding/SupportBot.Assistants.Onboarding.csproj" Id="3c807a59-c4c0-4ead-82b2-432bdad4f77d" />
     <Project Path="SupportBot.Assistants.Orchestrator/SupportBot.Assistants.Orchestrator.csproj" Id="7a98afe2-bba5-4c9a-9671-70ce6b187a34" />
   </Folder>
   <Folder Name="/Helpers/" />

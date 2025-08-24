@@ -2,34 +2,22 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 
-namespace SupportBot.Assistants.Orchestrator;
+namespace SupportBot.Assistants.Onboarding;
 
 /// <summary>
 /// Provides methods for configuring and retrieving services.
 /// </summary>
 public static class DependencyConfiguration
 {
-    private static Window? _mainWindow;
-
-    private static ServiceProvider? _services;
-
     /// <summary>
     /// Gets or sets the main window of the application.
     /// </summary>
-    public static Window? MainWindow
-    {
-        get => _mainWindow;
-        set => _mainWindow = Onboarding.DependencyConfiguration.MainWindow = value;
-    }
+    public static Window? MainWindow { get; set; }
 
     /// <summary>
     /// Gets or sets the service provider.
     /// </summary>
-    public static ServiceProvider? Services
-    {
-        get => _services;
-        set => _services = Onboarding.DependencyConfiguration.Services = value;
-    }
+    public static ServiceProvider? Services { get; set; }
 
     /// <summary>
     /// Configures the specified service collection.
@@ -37,7 +25,6 @@ public static class DependencyConfiguration
     /// <param name="services">The service collection to configure.</param>
     public static void Configure(ServiceCollection services)
     {
-        Onboarding.DependencyConfiguration.Configure(services);
         services.Configure();
     }
 

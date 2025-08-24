@@ -1,10 +1,11 @@
 ﻿#pragma warning disable OPENAI001 // For evaluation purposes only
 
 using System;
-using System.Diagnostics;
+using System.Text.Json;
 using System.Threading.Tasks;
 using OpenAI;
 using OpenAI.Assistants;
+using SupportBot.Assistants.Onboarding;
 using SupportBot.Assistants.Orchestrator.Models;
 
 namespace SupportBot.Assistants.Orchestrator;
@@ -21,7 +22,7 @@ namespace SupportBot.Assistants.Orchestrator;
 /// 4. Call <see cref="Cleanup"/> or <see cref="IDisposable.Dispose"/> when finished.
 /// Thread Safety: This abstraction is not guaranteed to be thread-safe; external synchronization may be required.
 /// </remarks>
-public interface IMainAgent : IDisposable
+public interface IOrchestrator : IDisposable
 {
     /// <summary>
     /// Raised after a run completes and the full message collection (thread history) is retrieved.
@@ -52,7 +53,7 @@ public interface IMainAgent : IDisposable
 }
 
 /// <summary>
-/// Main implementation of <see cref="IMainAgent"/> that encapsulates interaction with the OpenAI Assistants API.
+/// Main implementation of <see cref="IOrchestrator"/> that encapsulates interaction with the OpenAI Assistants API.
 /// Responsible for:
 /// - Creating and configuring an assistant.
 /// - Managing a single conversation thread lifecycle.
@@ -62,8 +63,18 @@ public interface IMainAgent : IDisposable
 /// </summary>
 /// <param name="openAIClient">The configured <see cref="OpenAIClient"/> used to obtain assistant clients.</param>
 /// <param name="assistantId">The unique identifier of an existing Assistant to use for this orchestrator.</param>
-internal sealed partial class MainAgent(OpenAIClient openAIClient, string assistantId) : IMainAgent
+/// <param name="onboardingAssistant">Secondary agent used to handle onboarding-related tool calls delegated by the main agent.</param>
+internal sealed partial class Orchestrator(
+    OpenAIClient openAIClient,
+    string assistantId,
+    IOnboardingAssistant onboardingAssistant
+) : IOrchestrator
 {
+    /// <summary>
+    /// Secondary agent used to handle onboarding-related tool calls delegated by the main agent.
+    /// </summary>
+    private readonly IOnboardingAssistant _onboardingAssistant = onboardingAssistant;
+
     /// <summary>
     /// Unique identifier of the Assistant instance to load and operate against.
     /// Provided via the primary constructor.
@@ -81,7 +92,7 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
     private Assistant? _assistant;
 
     /// <summary>
-    /// Backing store for the <see cref="IMainAgent.MessageReceived"/> event.
+    /// Backing store for the <see cref="IOrchestrator.MessageReceived"/> event.
     /// </summary>
     private MessageReceivedEventHandler? _messageReceived;
 
@@ -95,30 +106,55 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
     /// </summary>
     private AssistantClient? _assistantClient;
 
-    /// <inheritdoc />
-    event MessageReceivedEventHandler? IMainAgent.MessageReceived
+    /// <summary>
+    /// Raised after a run completes; handlers are added to or removed from the internal backing field.
+    /// </summary>
+    /// <remarks>
+    /// The event payload provides the full ordered message collection representing the current thread history.
+    /// </remarks>
+    event MessageReceivedEventHandler? IOrchestrator.MessageReceived
     {
         add => _messageReceived += value;
         remove => _messageReceived -= value;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Initializes the main assistant and related runtime state, then initializes the onboarding assistant.
+    /// </summary>
+    /// <returns>A task that completes when both assistants are initialized.</returns>
+    /// <remarks>
+    /// This method is safe to call multiple times. It clears prior state via <see cref="Cleanup"/> before initializing.
+    /// </remarks>
     public async Task InitializeAsync()
     {
         Cleanup();
         await InitializeAssistantAsync(_assistantId);
+        await _onboardingAssistant.InitializeAsync();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Resets internal state by clearing the main agent's references and delegating cleanup to the onboarding assistant.
+    /// </summary>
+    /// <remarks>
+    /// This does not delete any remote resources; it only clears local references and event subscriptions.
+    /// </remarks>
     public void Cleanup()
     {
+        _onboardingAssistant.Cleanup();
         _assistant = null;
         _messageReceived = null;
         _threadId = null;
         _assistantClient = null;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Processes a user message by creating or continuing a thread, starting a run, waiting for completion,
+    /// and notifying subscribers with the updated thread messages through <see cref="_messageReceived"/>.
+    /// </summary>
+    /// <param name="content">Plaintext user message content.</param>
+    /// <returns>A task that completes when processing finishes and notifications are raised.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the assistant or assistant client is not initialized, or if creating a run fails.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="content"/> is null, empty, or whitespace.</exception>
     public async Task HandleCustomerMessageAsync(string content)
     {
         if (_assistant == null)
@@ -188,22 +224,6 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
     {
         _ = await assistantClient.CreateMessageAsync(_threadId, MessageRole.User, [content]);
         var run = await assistantClient.CreateRunAsync(_threadId, assistantId);
-        //{
-        //    ToolsOverride = new()
-        //    {
-        //        { "get_current_location", GetCurrentLocation },
-        //        { "get_current_weather", (parameters) =>
-        //            {
-        //                parameters.TryGetValue("location", out var locationObj);
-        //                parameters.TryGetValue("unit", out var unitObj);
-        //                var location = locationObj as string ?? "unknown";
-        //                var unit = unitObj as string ?? "celsius";
-        //                return GetCurrentWeather(location, unit);
-        //            }
-        //        }
-        //    }
-        //});
-        // ToolDefinition
         return run.Value.Id;
     }
 
@@ -233,7 +253,7 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
 
     /// <summary>
     /// Retrieves the full ordered message history for the current thread and raises the
-    /// <see cref="IMainAgent.MessageReceived"/> event.
+    /// <see cref="IOrchestrator.MessageReceived"/> event.
     /// </summary>
     /// <param name="assistantClient">Assistant client used to fetch messages.</param>
     private void NotifyMessageReceived(AssistantClient assistantClient)
@@ -245,25 +265,15 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
         _messageReceived?.Invoke(messages);
     }
 
-    private static string GetCurrentLocation()
-    {
-        // Call the location API here.
-        return "San Francisco";
-    }
-
-    private static string GetCurrentWeather(string location, string unit = "celsius")
-    {
-        // Call the weather API here.
-        return $"31 {unit}";
-    }
-
     /// <summary>
     /// Polls an assistant run until its status becomes terminal (completed, failed, cancelled, etc.).
+    /// Also handles tool calls by delegating to the onboarding assistant and submitting tool outputs.
     /// </summary>
-    /// <param name="assistantClient">Assistant client for status checks.</param>
+    /// <param name="assistantClient">Assistant client for status checks and tool output submission.</param>
     /// <param name="threadId">Identifier of the thread containing the run.</param>
     /// <param name="runId">Identifier of the run to poll.</param>
-    private static async Task PollRunStatusAsync(
+    /// <returns>A task that completes when the run reaches a terminal state.</returns>
+    private async Task PollRunStatusAsync(
         AssistantClient assistantClient,
         string threadId,
         string runId
@@ -279,51 +289,44 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
             {
                 foreach (var action in runStatus.RequiredActions)
                 {
-                    if (action.FunctionName == nameof(GetCurrentLocation))
+                    if (action.FunctionName == "CallOnboardingAgent")
                     {
-                        var location = GetCurrentLocation();
-                        await assistantClient.SubmitToolOutputsToRunAsync(
-                            threadId,
-                            runId,
-                            [new ToolOutput() { Output = location, ToolCallId = action.ToolCallId }]
-                        );
-                    }
-                    else if (action.FunctionName == nameof(GetCurrentWeather))
-                    {
-                        // Extract arguments: supports both JSON string and dictionary-like structures.
-                        string location = "unknown";
-                        string unit = "celsius";
+                        var query = string.Empty;
 
                         if (action.FunctionArguments is string argsJson)
                         {
                             try
                             {
-                                using var doc = System.Text.Json.JsonDocument.Parse(argsJson);
+                                using var doc = JsonDocument.Parse(argsJson);
                                 var root = doc.RootElement;
 
-                                if (root.TryGetProperty("location", out var locEl) &&
-                                    locEl.ValueKind == System.Text.Json.JsonValueKind.String)
+                                if (
+                                    root.TryGetProperty("query", out var queryElement)
+                                    && queryElement.ValueKind == JsonValueKind.String
+                                )
                                 {
-                                    location = locEl.GetString() ?? location;
-                                }
-
-                                if (root.TryGetProperty("unit", out var unitEl) &&
-                                    unitEl.ValueKind == System.Text.Json.JsonValueKind.String)
-                                {
-                                    unit = unitEl.GetString() ?? unit;
+                                    query = queryElement.GetString() ?? query;
                                 }
                             }
-                            catch (System.Text.Json.JsonException)
+                            catch (JsonException)
                             {
                                 // Ignore malformed JSON and keep defaults.
                             }
                         }
 
-                        var weather = GetCurrentWeather(location, unit);
+                        var agentOutput = await _onboardingAssistant.HandleCustomerMessageAsync(
+                            content: query
+                        );
                         await assistantClient.SubmitToolOutputsToRunAsync(
                             threadId,
                             runId,
-                            [new ToolOutput() { Output = weather, ToolCallId = action.ToolCallId }]
+                            [
+                                new ToolOutput()
+                                {
+                                    Output = agentOutput,
+                                    ToolCallId = action.ToolCallId,
+                                },
+                            ]
                         );
                     }
                 }
@@ -332,10 +335,11 @@ internal sealed partial class MainAgent(OpenAIClient openAIClient, string assist
     }
 
     /// <summary>
-    /// Releases resources and clears state by delegating to <see cref="Cleanup"/>.
+    /// Releases resources and clears state by delegating to <see cref="Cleanup"/> and disposing the onboarding assistant.
     /// </summary>
     public void Dispose()
     {
         Cleanup();
+        _onboardingAssistant.Dispose();
     }
 }

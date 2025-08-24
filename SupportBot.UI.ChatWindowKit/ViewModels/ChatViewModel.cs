@@ -25,19 +25,19 @@ namespace SupportBot.UI.ChatWindowKit.ViewModels;
 /// <remarks>
 /// Responsibilities:
 /// - Holds user input text (two-way bound to a TextBox).
-/// - Coordinates with <see cref="IMainAgent"/> for assistant responses.
+/// - Coordinates with <see cref="IOrchestrator"/> for assistant responses.
 /// - Raises <see cref="MessageReceived"/> after any message (user or assistant) is appended.
 /// Thread Safety: This type is intended to be accessed on the UI thread only.
 /// Disposal: Ensures event handlers are detached and state cleared during cleanup / disposal.
 /// </remarks>
 /// <param name="mainAgent">Chat session abstraction used to interact with the AI assistant.</param>
-internal sealed partial class ChatViewModel(ILogger<ChatViewModel> logger, IMainAgent mainAgent)
+internal sealed partial class ChatViewModel(ILogger<ChatViewModel> logger, IOrchestrator mainAgent)
     : BaseViewModel(logger)
 {
     /// <summary>
     /// Reference to the main agent responsible for orchestrating assistant communication.
     /// </summary>
-    private readonly IMainAgent _mainAgent = mainAgent;
+    private readonly IOrchestrator _mainAgent = mainAgent;
 
     /// <summary>
     /// Backing field for the <see cref="MessageReceived"/> event.
@@ -121,7 +121,7 @@ internal sealed partial class ChatViewModel(ILogger<ChatViewModel> logger, IMain
     }
 
     /// <summary>
-    /// Handles messages received from the <see cref="IMainAgent"/> by translating them into
+    /// Handles messages received from the <see cref="IOrchestrator"/> by translating them into
     /// UI <see cref="Message"/> instances and appending them to the <see cref="Messages"/> collection.
     /// Also surfaces any file annotations as separate informational messages.
     /// </summary>

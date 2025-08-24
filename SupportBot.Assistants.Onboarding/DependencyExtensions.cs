@@ -1,9 +1,8 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
-using SupportBot.Assistants.Onboarding;
 
-namespace SupportBot.Assistants.Orchestrator;
+namespace SupportBot.Assistants.Onboarding;
 
 /// <summary>
 /// Provides extension methods for configuring dependency injection services.
@@ -18,16 +17,15 @@ internal static class DependencyExtensions
     internal static IServiceCollection Configure(this IServiceCollection services)
     {
         services.AddServices();
-        services.AddSingleton<IOrchestrator, Orchestrator>(services =>
+        services.AddSingleton<IOnboardingAssistant, OnboardingAssistant>(services =>
         {
             var assistantId =
-                Environment.GetEnvironmentVariable("SUPPORT_ORCHESTRATOR")
+                Environment.GetEnvironmentVariable("ONBOARDING_SUB_AGENT")
                 ?? throw new InvalidOperationException(
-                    "SUPPORT_ORCHESTRATOR environment variable is not set."
+                    "ONBOARDING_SUB_AGENT environment variable is not set."
                 );
             var openAIClient = services.GetRequiredService<OpenAIClient>();
-            var onboardingAssistant = services.GetRequiredService<IOnboardingAssistant>();
-            return new Orchestrator(openAIClient, assistantId, onboardingAssistant);
+            return new OnboardingAssistant(openAIClient, assistantId);
         });
         return services;
     }
