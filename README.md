@@ -24,9 +24,11 @@ SupportBot is a Level 1 support chatbot built using ChatGPT and WinUI. It helps 
 git clone https://github.com/TadeasBurda/supprot-bot.git
 ```
 2. Open the solution in Visual Studio.
-3. Add your OpenAI API key to:
+3. Add your OpenAI API keys to:
  ```bash 
 setx OPENAI_API_KEY "your_api_key_here"
+setx SUPPORT_ORCHESTRATOR "your_assistant_id_here"
+setx ONBOARDING_SUB_AGENT "your_assistant_id_here"
 ```
 4. Build and run the project.
 
